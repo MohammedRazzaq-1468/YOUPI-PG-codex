@@ -3,9 +3,20 @@ node_modules/
 .pnp
 .pnp.js
 
-# pnpm
+# pnpm (virtual store symlinks inside each workspace package)
 .pnpm-store/
 .pnpm-debug.log*
+# Per-package node_modules created by pnpm workspace linking
+apps/*/node_modules/
+packages/*/node_modules/
+
+# Build outputs
+packages/common/dist/
+packages/common/tsconfig.tsbuildinfo
+
+# Android Gradle caches
+apps/android-observer-app/.gradle/
+apps/android-observer-app/build/
 
 # Environment and Secrets
 .env
