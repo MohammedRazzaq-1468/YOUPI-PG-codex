@@ -48,3 +48,8 @@ Thumbs.db
 !packages/**
 !docs/**
 !assets/**
+packages/common/dist/**
+tsconfig.tsbuildinfo
+.serena/
+apps/android-observer-app/.gradle
+apps/android-observer-app/build/

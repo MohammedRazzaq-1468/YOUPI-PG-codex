@@ -6,10 +6,17 @@
   "main": "./src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test src/__tests__/**/*.test.js"
+    "test": "node --test src/__tests__/**/*.test.js",
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/css/admin.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./public/css/admin.css --watch"
   },
   "dependencies": {
     "@youpi/common": "*",
     "@youpi/db": "*"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
   }
 }

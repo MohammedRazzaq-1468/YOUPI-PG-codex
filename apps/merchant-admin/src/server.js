@@ -173,6 +173,22 @@ export class AdminServer {
         }
       }
 
+      // Static Stylesheets: GET /css/*
+      if (pathname.startsWith('/css/')) {
+        const cssFile = path.basename(pathname);
+        const cssPath = path.resolve(__dirname, '../public/css', cssFile);
+        if (fs.existsSync(cssPath)) {
+          const content = fs.readFileSync(cssPath, 'utf8');
+          res.writeHead(200, {
+            'Content-Type': 'text/css; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(content);
+          return;
+        }
+      }
+
       // Dashboard View: GET / or GET /admin
       if (pathname === '/' || pathname === '/admin') {
         const html = this.renderHtml();
