@@ -1,0 +1,26 @@
+# =============================================================================
+# YOUPI PG — Docker Compose (Production Override)
+#
+# Usage (with base compose):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Requires CLOUDFLARE_DOMAIN to be set in .env (or env).
+# =============================================================================
+
+services:
+  gateway:
+    environment:
+      NODE_ENV: production
+      YOUPI_MODE: production
+    # Production: run the production entrypoint (requires CLOUDFLARE_DOMAIN)
+    command: node scripts/start.js
+    # Production restart policy
+    restart: always
+    # Tighter resource limits for production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M

@@ -9,9 +9,9 @@
     "test": "node --test src/__tests__/**/*.test.js"
   },
   "dependencies": {
-    "@youpi/common": "*",
-    "@youpi/core": "*",
-    "@youpi/db": "*",
+    "@youpi/common": "workspace:*",
+    "@youpi/core": "workspace:*",
+    "@youpi/db": "workspace:*",
     "berryprotocol": "^0.1.10",
     "qrcode": "^1.5.4"
   }

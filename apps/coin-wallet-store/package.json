@@ -9,7 +9,7 @@
     "test": "node --test src/__tests__/**/*.test.js"
   },
   "dependencies": {
-    "@youpi/common": "*",
-    "@youpi/merchant-sdk": "*"
+    "@youpi/common": "workspace:*",
+    "@youpi/merchant-sdk": "workspace:*"
   }
 }
