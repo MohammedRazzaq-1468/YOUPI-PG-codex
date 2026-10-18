@@ -108,6 +108,74 @@ export class AdminServer {
     }
   }
 
+  async rebuildCssIfNeeded() {
+    try {
+      const cssPath = path.resolve(__dirname, '../public/css/admin.css');
+      const inputCssPath = path.resolve(__dirname, 'styles/input.css');
+      const tailwindConfigPath = path.resolve(__dirname, '../tailwind.config.js');
+
+      let cssTime = 0;
+      if (fs.existsSync(cssPath)) {
+        cssTime = fs.statSync(cssPath).mtimeMs;
+      }
+
+      let needsRebuild = cssTime === 0;
+      if (!needsRebuild && fs.existsSync(inputCssPath)) {
+        if (fs.statSync(inputCssPath).mtimeMs > cssTime) {
+          needsRebuild = true;
+        }
+      }
+      if (!needsRebuild && fs.existsSync(tailwindConfigPath)) {
+        if (fs.statSync(tailwindConfigPath).mtimeMs > cssTime) {
+          needsRebuild = true;
+        }
+      }
+
+      if (!needsRebuild) {
+        const viewsDir = path.resolve(__dirname, 'views');
+        const checkViews = (dir) => {
+          if (!fs.existsSync(dir)) return;
+          const files = fs.readdirSync(dir);
+          for (const f of files) {
+            const full = path.join(dir, f);
+            const stat = fs.statSync(full);
+            if (stat.isDirectory()) {
+              checkViews(full);
+              if (needsRebuild) break;
+            } else if (f.endsWith('.jsx') || f.endsWith('.js') || f.endsWith('.html')) {
+              if (stat.mtimeMs > cssTime) {
+                needsRebuild = true;
+                break;
+              }
+            }
+          }
+        };
+        checkViews(viewsDir);
+      }
+
+      if (needsRebuild) {
+        const postcss = require('postcss');
+        const tailwindcss = require('tailwindcss');
+        const autoprefixer = require('autoprefixer');
+
+        const outDir = path.resolve(__dirname, '../public/css');
+        if (!fs.existsSync(outDir)) {
+          fs.mkdirSync(outDir, { recursive: true });
+        }
+
+        const rawCss = fs.readFileSync(inputCssPath, 'utf8');
+        const result = await postcss([
+          tailwindcss(tailwindConfigPath),
+          autoprefixer
+        ]).process(rawCss, { from: inputCssPath });
+
+        fs.writeFileSync(cssPath, result.css, 'utf8');
+        console.log('[AdminServer] Auto-recompiled Tailwind CSS on demand.');
+      }
+    } catch (err) {
+      console.warn('[AdminServer] On-demand CSS build failed:', err.message);
+    }
+  }
 
   renderHtml() {
     this.rebuildJsxIfNeeded();
@@ -285,6 +353,40 @@ export class AdminServer {
       }
 
 
+
+      // CSS: /src/styles/input.css or /css/*
+      if (pathname === '/src/styles/input.css' || pathname.startsWith('/css/')) {
+        await this.rebuildCssIfNeeded();
+        const cssPath = path.resolve(__dirname, '../public/css/admin.css');
+        if (fs.existsSync(cssPath)) {
+          const content = fs.readFileSync(cssPath, 'utf8');
+          res.writeHead(200, {
+            'Content-Type': 'text/css; charset=utf-8',
+            'Cache-Control': 'no-cache',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(content);
+          return;
+        }
+      }
+
+      // Vite Module / Source Entry: GET /src/*
+      if (pathname.startsWith('/src/')) {
+        if (pathname === '/src/views/index.jsx' || pathname.endsWith('.jsx')) {
+          this.rebuildJsxIfNeeded();
+          const clientBundle = path.resolve(__dirname, '../public/js/admin.bundle.js');
+          if (fs.existsSync(clientBundle)) {
+            const content = fs.readFileSync(clientBundle, 'utf8');
+            res.writeHead(200, {
+              'Content-Type': 'application/javascript; charset=utf-8',
+              'Cache-Control': 'no-cache',
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(content);
+            return;
+          }
+        }
+      }
 
       // Static JavaScript: GET /js/*
       if (pathname.startsWith('/js/')) {

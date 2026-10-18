@@ -5,30 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Merchant Portal & Control Hub — YOUPI PG</title>
-  <!-- Direct Tailwind CSS (No .css files or build steps required) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: ['selector', '[data-theme="dark"]'],
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              blue: '#2563eb',
-              darkBg: '#090d16',
-              darkNav: '#0b1120',
-              darkCard: '#0f172a',
-            }
-          }
-        }
-      }
-    };
-  </script>
-  <style>
-    [hidden] {
-      display: none !important;
-    }
-  </style>
+  <!-- Vite Direct Syntax: Tailwind CSS & React Module -->
+  <link rel="stylesheet" href="/src/styles/input.css" />
 </head>
 
 <body class="bg-[#f8fafc] dark:bg-[#090d16] text-[#0f172a] dark:text-[#f8fafc] min-h-screen flex flex-col overflow-x-hidden">
@@ -38,8 +16,8 @@
   <script>
     window.API_BASE = "{{API_BASE_URL}}";
   </script>
-  <!-- Compiled React JSX Components Bundle -->
-  <script src="/js/admin.bundle.js"></script>
+  <!-- Direct Vite Module Entry -->
+  <script type="module" src="/src/views/index.jsx"></script>
   <!-- Client Controllers & Logic -->
   <script src="/js/admin.js"></script>
 
