@@ -39,6 +39,23 @@ export class AdminServer {
     } catch {}
 
     let html = this.template;
+
+    // Resolve modular partial includes: <!-- include:partials/<filename>.html -->
+    const includeRegex = /<!--\s*include:([a-zA-Z0-9_\-\/.]+)\s*-->/g;
+    html = html.replace(includeRegex, (match, partialPath) => {
+      try {
+        const fullPartialPath = path.resolve(__dirname, 'views', partialPath);
+        if (fs.existsSync(fullPartialPath)) {
+          return fs.readFileSync(fullPartialPath, 'utf8');
+        }
+        console.warn(`[AdminServer] Partial file not found: ${fullPartialPath}`);
+        return `<!-- Missing partial: ${partialPath} -->`;
+      } catch (err) {
+        console.error(`[AdminServer] Error reading partial ${partialPath}:`, err);
+        return `<!-- Error including partial: ${partialPath} -->`;
+      }
+    });
+
     // Always use empty string '' so client fetch calls hit the merchant admin's own /api proxy!
     // This completely eliminates CORS errors, tunnel downtime 530s, and cross-origin failures.
     const clientApiBase = '';
@@ -181,6 +198,22 @@ export class AdminServer {
           const content = fs.readFileSync(cssPath, 'utf8');
           res.writeHead(200, {
             'Content-Type': 'text/css; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(content);
+          return;
+        }
+      }
+
+      // Static JavaScript: GET /js/*
+      if (pathname.startsWith('/js/')) {
+        const jsFile = path.basename(pathname);
+        const jsPath = path.resolve(__dirname, '../public/js', jsFile);
+        if (fs.existsSync(jsPath)) {
+          const content = fs.readFileSync(jsPath, 'utf8');
+          res.writeHead(200, {
+            'Content-Type': 'application/javascript; charset=utf-8',
             'Cache-Control': 'public, max-age=3600',
             'Access-Control-Allow-Origin': '*'
           });
