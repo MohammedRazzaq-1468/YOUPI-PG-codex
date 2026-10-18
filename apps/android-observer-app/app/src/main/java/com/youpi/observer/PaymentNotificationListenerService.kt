@@ -28,9 +28,17 @@ class PaymentNotificationListenerService : NotificationListenerService() {
         val notification = sbn.notification ?: return
         val extras = notification.extras ?: return
 
-        val title = extras.getString(Notification.EXTRA_TITLE)
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
-            ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        val textParts = listOfNotNull(
+            extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
+            extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString(),
+            extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString(),
+            extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString(),
+            extras.getCharSequence(Notification.EXTRA_BIG_CONTENT_TITLE)?.toString(),
+            extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+                ?.joinToString(" ") { it.toString() }
+        ).map(String::trim).filter(String::isNotEmpty).distinct()
+        val text = textParts.joinToString("\n")
 
         Log.d(TAG, "Observed notification from $packageName: $title - $text")
 

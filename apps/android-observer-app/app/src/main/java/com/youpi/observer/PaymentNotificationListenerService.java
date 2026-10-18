@@ -8,6 +8,8 @@ import android.util.Log;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class PaymentNotificationListenerService extends NotificationListenerService {
     private static final String TAG = "YoupiNotifListener";
@@ -38,14 +40,25 @@ public class PaymentNotificationListenerService extends NotificationListenerServ
         CharSequence bigTextCs = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
 
         String title = titleCs != null ? titleCs.toString() : "";
-        String text = textCs != null ? textCs.toString() : "";
-        if (bigTextCs != null && bigTextCs.length() > text.length()) {
-            text = bigTextCs.toString();
+        Set<String> textParts = new LinkedHashSet<>();
+        addNotificationText(textParts, textCs);
+        addNotificationText(textParts, bigTextCs);
+        addNotificationText(textParts, extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT));
+        addNotificationText(textParts, extras.getCharSequence(Notification.EXTRA_SUB_TEXT));
+        addNotificationText(textParts, extras.getCharSequence(Notification.EXTRA_BIG_CONTENT_TITLE));
+        CharSequence[] textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+        if (textLines != null) {
+            for (CharSequence line : textLines) {
+                addNotificationText(textParts, line);
+            }
         }
+        String text = String.join("\n", textParts);
 
         String full = (title + " " + text).toLowerCase();
         // Check if this looks like a credit / payment received notification
-        if (!full.contains("received") && !full.contains("credited") && !full.contains("deposit") && !full.contains("paid you")) {
+        if (!full.contains("received") && !full.contains("credited") && !full.contains("deposit")
+                && !full.contains("paid you") && !full.contains("you got") && !full.contains("money added")
+                && !full.matches("(?s).*added\\s+to\\s+(your\\s+)?(account|wallet|balance).*")) {
             return;
         }
 
@@ -86,5 +99,11 @@ public class PaymentNotificationListenerService extends NotificationListenerServ
                 apiClient.sendObservation(amountPaise, finalAmount, finalBankRef, finalVpa, finalTitle, finalTex);
             }
         }).start();
+    }
+
+    private static void addNotificationText(Set<String> textParts, CharSequence value) {
+        if (value == null) return;
+        String text = value.toString().trim();
+        if (!text.isEmpty()) textParts.add(text);
     }
 }

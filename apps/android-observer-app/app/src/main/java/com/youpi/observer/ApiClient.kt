@@ -1,6 +1,7 @@
 package com.youpi.observer
 
 import android.content.Context
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import okhttp3.MediaType.Companion.toMediaType
@@ -83,7 +84,6 @@ class ApiClient(private val context: Context) {
         val signingKey = prefs.getString("signing_key", null) ?: return false
         val baseUrl = getBaseUrl()
 
-        val timestamp = System.currentTimeMillis().toString()
         val url = "$baseUrl/api/v1/pollers/android/events"
 
         val rawNotification = JSONObject().apply {
@@ -103,23 +103,38 @@ class ApiClient(private val context: Context) {
         }
 
         val bodyString = bodyJson.toString()
-        val sigPayload = "$bodyString:$timestamp"
-        val signature = calculateHmac(sigPayload, signingKey)
+        for (attempt in 0..2) {
+            val timestamp = System.currentTimeMillis().toString()
+            val signature = calculateHmac("$bodyString:$timestamp", signingKey)
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("X-Device-Id", deviceId)
+                .addHeader("X-Timestamp", timestamp)
+                .addHeader("X-Signature", signature)
+                .post(bodyString.toRequestBody("application/json".toMediaType()))
+                .build()
 
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("X-Device-Id", deviceId)
-            .addHeader("X-Timestamp", timestamp)
-            .addHeader("X-Signature", signature)
-            .post(bodyString.toRequestBody("application/json".toMediaType()))
-            .build()
-
-        try {
-            client.newCall(request).execute().use { res ->
-                return res.isSuccessful
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) return true
+                    if (response.code < 500 && response.code != 408 && response.code != 429) {
+                        Log.e(TAG, "Observation rejected by gateway: HTTP ${response.code}")
+                        return false
+                    }
+                    Log.w(TAG, "Observation delivery attempt ${attempt + 1} failed: HTTP ${response.code}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Observation delivery attempt ${attempt + 1} failed: ${e.message}", e)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+
+            if (attempt < 2) {
+                try {
+                    Thread.sleep(300L * (1L shl attempt))
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return false
+                }
+            }
         }
         return false
     }

@@ -65,6 +65,17 @@ describe('Google Messages / SMS Payment Observer Integration Tests', () => {
       const parsed = BankSmsParser.parse(debitSms);
       assert.equal(parsed, null);
     });
+
+    test('parses a FamPay-style incoming credit notification', () => {
+      const parsed = BankSmsParser.parse({
+        text: 'You got ₹1,250.50 added to your FamPay balance.',
+        sender: 'FAMPAY'
+      });
+
+      assert.ok(parsed);
+      assert.equal(parsed.amountPaise, 125050n);
+      assert.equal(parsed.amount, '1250.50');
+    });
   });
 
   describe('SMS Observer HTTP Service & Attribution', () => {

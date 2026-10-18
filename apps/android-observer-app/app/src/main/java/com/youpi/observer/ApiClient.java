@@ -141,7 +141,6 @@ public class ApiClient {
         String endpoint = baseUrl + "/api/v1/pollers/android/events";
 
         try {
-            String tsStr = String.valueOf(System.currentTimeMillis());
             JSONObject raw = new JSONObject();
             raw.put("title", title != null ? title : "");
             raw.put("text", text != null ? text : "");
@@ -156,11 +155,21 @@ public class ApiClient {
             json.put("rawNotification", raw);
 
             String bodyString = json.toString();
-            String sigPayload = bodyString + ":" + tsStr;
-            String signature = calculateHmacSha256(sigPayload, signingKey);
-
-            String response = postJson(endpoint, bodyString, deviceId, tsStr, signature);
-            return response != null;
+            for (int attempt = 0; attempt < 3; attempt++) {
+                String tsStr = String.valueOf(System.currentTimeMillis());
+                String signature = calculateHmacSha256(bodyString + ":" + tsStr, signingKey);
+                String response = postJson(endpoint, bodyString, deviceId, tsStr, signature);
+                if (response != null) return true;
+                if (attempt < 2) {
+                    try {
+                        Thread.sleep(300L * (1L << attempt));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                }
+            }
+            return false;
         } catch (Exception e) {
             Log.e(TAG, "sendObservation error: " + e.getMessage());
         }

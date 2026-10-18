@@ -81,7 +81,7 @@ export class BankSmsParser {
     if (!text) return null;
 
     // Check if SMS represents an incoming credit
-    const creditKeywords = /(credited|received|deposit|payment received|payment|upi\/cr|transferred)/i;
+    const creditKeywords = /(credited|received|deposit|payment received|payment|upi\/cr|transferred|paid you|you got|money added|added to (?:your )?(?:account|wallet|balance))/i;
     if (!creditKeywords.test(text)) {
       return null;
     }

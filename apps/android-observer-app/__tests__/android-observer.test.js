@@ -94,4 +94,30 @@ describe('Android Payment Observer Integration Tests', () => {
     const updated = apiInstance.app.context.sessionRepo.findById(session.id);
     assert.equal(updated.status, PaymentStatus.SUCCESS);
   });
+
+  test('confirms FamPay-style incoming credit when the notification has no UTR', async () => {
+    const session = apiInstance.app.context.sessionRepo.create({
+      merchantId: '00000000-0000-0000-0000-000000000001',
+      receivingAccountId: '00000000-0000-0000-0000-000000000002',
+      orderId: 'ANDR-ORD-FAMPAY-NO-UTR',
+      amountPaise: 125050n
+    });
+
+    apiInstance.app.context.queueEngine.enqueueOrActivate(session.id, '00000000-0000-0000-0000-000000000002');
+    apiInstance.app.context.timingEngine.handlePaymentDone(session.id);
+
+    const res = await driver.submitObservation({
+      amount: '1250.50',
+      receivingAccountId: '00000000-0000-0000-0000-000000000002',
+      notificationText: 'You got ₹1,250.50 added to your FamPay balance.'
+    });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.accepted, true);
+    assert.equal(res.body.attribution.attributed, true);
+    assert.equal(res.body.attribution.paymentSessionId, session.id);
+
+    const updated = apiInstance.app.context.sessionRepo.findById(session.id);
+    assert.equal(updated.status, PaymentStatus.SUCCESS);
+  });
 });

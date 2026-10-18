@@ -90,6 +90,7 @@ To ensure Android OEMs (Xiaomi MIUI, Samsung OneUI, OnePlus OxygenOS, Realme/Opp
 1. Open phone **Settings** > **Apps** > **YOUPI Observer**.
 2. Tap **Battery** > Select **Unrestricted** (or "Don't optimize").
 3. Enable **Autostart** / **Allow background activity**.
+4. Enable payment/credit notifications for Google Pay, FamPay, and the receiving bank/payment app. The observer can only report notifications Android exposes; a sender-side "payment sent" screen is not proof that the receiving account was credited.
 
 ### Step 4: Pair with Gateway
 1. Open your Merchant Admin (`http://localhost:6001`).
@@ -115,7 +116,7 @@ adb shell cmd notification post -S bigtext -t "Google Pay" "Payment Received" "R
 adb shell cmd notification post -S bigtext -t "Paytm" "Money Received" "Received Rs 1,200 from 9876543210@paytm. UPI Ref: 5544332211"
 ```
 
-The app's `PaymentNotificationListenerService` will instantly catch the notification, extract the amount and UTR, compute the HMAC-SHA256 signature, and transmit the observation to your backend.
+The app's `PaymentNotificationListenerService` reads both compact and expanded notification content, extracts the incoming amount and any available UTR, signs the observation with HMAC-SHA256, and transmits it to your backend. Some payment apps omit the UTR in notifications; the backend can still match an observation to an active payment by exact amount, receiving account, and session time window. Transient delivery failures are retried up to three times. Confirmation still depends on the configured verification window and safeguards; disabled notifications, an offline or force-stopped device, and missing receiver alerts cannot be recovered by the observer.
 
 ---
 
