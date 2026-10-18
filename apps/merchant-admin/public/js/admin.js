@@ -146,7 +146,7 @@ const API_BASE = (typeof window !== 'undefined' && window.API_BASE !== undefined
       let defaultSub = targetSubTab || items[0].id;
       items.forEach(item => {
         const btn = document.createElement('button');
-        btn.className = `sub-nav-pill ${item.id === defaultSub ? 'active' : ''}`;
+        btn.className = `sub-nav-pill inline-flex items-center gap-2 py-1.5 px-4 rounded-full font-bold whitespace-nowrap text-xs border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 cursor-pointer transition-all hover:text-slate-900 dark:hover:text-white hover:border-slate-400 [&.active]:bg-blue-600 [&.active]:text-white [&.active]:border-blue-600 [&.active]:shadow-md [&.active]:shadow-blue-500/25 ${item.id === defaultSub ? 'active' : ''}`;
         btn.textContent = item.label;
         btn.onclick = () => switchSubView(sectionId, item.id);
         subNav.appendChild(btn);
@@ -1642,7 +1642,7 @@ const API_BASE = (typeof window !== 'undefined' && window.API_BASE !== undefined
 
     // --- GMAIL DIRECT API & AUTOMATED GOOGLE LOGIN ---
     function copyGmailRedirectUri() {
-      const uri = document.getElementById('gmailRedirectUriInput')?.value || 'https://pay-gmail.gauravtesting.online/oauth/callback';
+      const uri = document.getElementById('gmailRedirectUriInput')?.value || (window.location.origin + '/oauth/callback');
       navigator.clipboard.writeText(uri).then(() => {
         showAdminToast('Redirect URI copied to clipboard!');
       });
@@ -1772,7 +1772,7 @@ const API_BASE = (typeof window !== 'undefined' && window.API_BASE !== undefined
         if (document.getElementById('gmailClientSecretInput')) document.getElementById('gmailClientSecretInput').value = cfg.clientSecret || data.clientSecret || '';
         if (document.getElementById('gmailRefreshTokenInput')) document.getElementById('gmailRefreshTokenInput').value = cfg.refreshToken || '';
 
-        const redirectUri = data.redirectUri || 'https://pay-gmail.gauravtesting.online/oauth/callback';
+        const redirectUri = data.redirectUri || (window.location.origin + '/oauth/callback');
         if (document.getElementById('gmailRedirectUriInput')) document.getElementById('gmailRedirectUriInput').value = redirectUri;
         if (document.getElementById('guideProdUri')) document.getElementById('guideProdUri').textContent = redirectUri;
 

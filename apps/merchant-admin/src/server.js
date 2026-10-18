@@ -2,8 +2,12 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import React from 'react';
+import ReactDOMServer from 'react-dom/server';
 import { getDatabase, MerchantRepository, SupportTicketRepository } from '@youpi/db';
 
+const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -33,12 +37,102 @@ export class AdminServer {
     this.template = fs.readFileSync(this.htmlTemplatePath, 'utf8');
   }
 
+  rebuildJsxIfNeeded() {
+    try {
+      const viewsDir = path.resolve(__dirname, 'views');
+      const clientBundle = path.resolve(__dirname, '../public/js/admin.bundle.js');
+      const ssrBundle = path.resolve(__dirname, '../public/js/admin.ssr.cjs');
+
+      let bundleTime = 0;
+      if (fs.existsSync(clientBundle)) {
+        bundleTime = fs.statSync(clientBundle).mtimeMs;
+      }
+
+      let needsRebuild = bundleTime === 0;
+      if (!needsRebuild) {
+        const checkDir = (dir) => {
+          if (!fs.existsSync(dir)) return;
+          const files = fs.readdirSync(dir);
+          for (const f of files) {
+            const full = path.join(dir, f);
+            const stat = fs.statSync(full);
+            if (stat.isDirectory()) {
+              checkDir(full);
+            } else if (f.endsWith('.jsx') || f.endsWith('.js') || f.endsWith('.html')) {
+              if (stat.mtimeMs > bundleTime) {
+                needsRebuild = true;
+                break;
+              }
+            }
+          }
+        };
+        checkDir(viewsDir);
+      }
+
+      if (needsRebuild) {
+        const esbuild = require('esbuild');
+        const outDir = path.resolve(__dirname, '../public/js');
+        if (!fs.existsSync(outDir)) {
+          fs.mkdirSync(outDir, { recursive: true });
+        }
+
+        // 1. Client Browser Bundle (Unminified for clean human-readable dev inspection)
+        esbuild.buildSync({
+          entryPoints: [path.join(viewsDir, 'index.jsx')],
+          bundle: true,
+          outfile: clientBundle,
+          minify: false,
+          format: 'iife',
+          target: ['es2020'],
+          define: {
+            'process.env.NODE_ENV': '"production"'
+          }
+        });
+
+        // 2. SSR Bundle
+        esbuild.buildSync({
+          entryPoints: [path.join(viewsDir, 'App.jsx')],
+          bundle: true,
+          outfile: ssrBundle,
+          format: 'cjs',
+          target: ['node18'],
+          define: {
+            'process.env.NODE_ENV': '"production"'
+          }
+        });
+
+        console.log('[AdminServer] Auto-recompiled React JSX components on demand.');
+      }
+    } catch (err) {
+      console.warn('[AdminServer] On-demand JSX build failed, serving cached bundle:', err.message);
+    }
+  }
+
+
   renderHtml() {
+    this.rebuildJsxIfNeeded();
     try {
       this.template = fs.readFileSync(this.htmlTemplatePath, 'utf8');
     } catch {}
 
     let html = this.template;
+
+    // Server-Side Rendering (SSR) for React JSX components
+    const ssrBundlePath = path.resolve(__dirname, '../public/js/admin.ssr.cjs');
+    if (html.includes('<!-- SSR_APP_ROOT -->')) {
+      let ssrMarkup = '';
+      if (fs.existsSync(ssrBundlePath)) {
+        try {
+          const resolvedPath = path.resolve(ssrBundlePath);
+          delete require.cache[resolvedPath];
+          const App = require(resolvedPath).default || require(resolvedPath);
+          ssrMarkup = ReactDOMServer.renderToString(React.createElement(App));
+        } catch (err) {
+          console.warn('[AdminServer] SSR rendering error, falling back to client-side mount:', err.message);
+        }
+      }
+      html = html.replace('<!-- SSR_APP_ROOT -->', ssrMarkup);
+    }
 
     // Resolve modular partial includes: <!-- include:partials/<filename>.html -->
     const includeRegex = /<!--\s*include:([a-zA-Z0-9_\-\/.]+)\s*-->/g;
@@ -190,25 +284,14 @@ export class AdminServer {
         }
       }
 
-      // Static Stylesheets: GET /css/*
-      if (pathname.startsWith('/css/')) {
-        const cssFile = path.basename(pathname);
-        const cssPath = path.resolve(__dirname, '../public/css', cssFile);
-        if (fs.existsSync(cssPath)) {
-          const content = fs.readFileSync(cssPath, 'utf8');
-          res.writeHead(200, {
-            'Content-Type': 'text/css; charset=utf-8',
-            'Cache-Control': 'public, max-age=3600',
-            'Access-Control-Allow-Origin': '*'
-          });
-          res.end(content);
-          return;
-        }
-      }
+
 
       // Static JavaScript: GET /js/*
       if (pathname.startsWith('/js/')) {
         const jsFile = path.basename(pathname);
+        if (jsFile === 'admin.bundle.js') {
+          this.rebuildJsxIfNeeded();
+        }
         const jsPath = path.resolve(__dirname, '../public/js', jsFile);
         if (fs.existsSync(jsPath)) {
           const content = fs.readFileSync(jsPath, 'utf8');
