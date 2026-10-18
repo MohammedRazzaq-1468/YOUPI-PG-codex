@@ -22,10 +22,26 @@
 | `LATE_OBSERVATION_WINDOW_MS` | `1800000` | Safety window for matching late observations (30 minutes) |
 | `ANDROID_ENROLLMENT_SECRET` | `32+ chars` | Ephemeral secret token used to authorize device QR pairing |
 | `ANDROID_HEARTBEAT_TIMEOUT_MS` | `180000` | Inactivity window before Android device is marked DISCONNECTED |
+| `SMTP_HOST` | unset | SMTP server used by the Coin Wallet Store for successful-payment receipts |
+| `SMTP_PORT` | `587` | SMTP server port (`465` normally uses implicit TLS) |
+| `SMTP_SECURE` | inferred from port | Set to `true` for implicit TLS or `false` for STARTTLS |
+| `SMTP_USER` | unset | Optional SMTP username; configure together with `SMTP_PASSWORD` |
+| `SMTP_PASSWORD` | unset | Optional SMTP password; configure together with `SMTP_USER` |
+| `SMTP_FROM` | unset | Sender address shown on customer payment-receipt emails |
 
 ---
 
-## 2. Cryptographic Secret Generation
+## 2. Successful-Payment Customer Notifications
+
+After the Coin Wallet Store verifies a signed `SUCCESS` webhook, it uses the Payment API's existing WhatsApp Berry sender to message the payment customer's registered phone number. It sends a receipt email to the registered customer email when one is available. Customer contact details are loaded from the payment session, not accepted from the browser or webhook body.
+
+Configure `SMTP_HOST` and `SMTP_FROM` to enable receipt email. Add `SMTP_USER` and `SMTP_PASSWORD` together when the relay requires authentication. WhatsApp delivery requires the existing WhatsApp Berry session to be connected in Merchant Admin. Missing customer contact details or unavailable delivery services are logged; they do not undo a payment or wallet credit.
+
+Email templates are HTML-only: `apps/coin-wallet-store/src/email-templates/payment-success.html` for verified payments and `apps/coin-wallet-store/src/email-templates/payment-cancelled.html` for verified cancellations. WhatsApp messages are composed by the notification service; no `.txt` email templates are used.
+
+---
+
+## 3. Cryptographic Secret Generation
 
 Generate strong 256-bit encryption and HMAC keys using Node.js native crypto:
 

@@ -164,10 +164,10 @@
 <main>
   <!-- Optional Celebration Banner -->
   <div class="celebration-banner" id="successBanner" hidden>
-    <div style="font-size: 2.5rem; margin-bottom: 0.35rem;">🎉</div>
-    <h2 style="color: #34d399; margin-bottom: 0.35rem; font-size: 1.45rem;">Top-Up Successful!</h2>
-    <p style="color: var(--text-muted); font-size: 0.95rem;">
-      Your payment was confirmed and your coins have been loaded into your vault balance!
+    <div id="paymentNoticeIcon" style="font-size: 2.5rem; margin-bottom: 0.35rem;">⏳</div>
+    <h2 id="paymentNoticeTitle" style="color: #fbbf24; margin-bottom: 0.35rem; font-size: 1.45rem;">Payment status pending</h2>
+    <p id="paymentNoticeText" style="color: var(--text-muted); font-size: 0.95rem;">
+      Checkout returned to this page. Wallet credit is pending verification of the signed server-to-server webhook.
     </p>
   </div>
 
@@ -216,7 +216,7 @@
       <button type="button" onclick="closeQuickPackModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer;">✕</button>
     </div>
 
-    <div class="quick-pack-item" onclick="triggerCheckout('Starter Pack', 100, 100)">
+    <div class="quick-pack-item" onclick="triggerCheckout('Starter Pack', 100)">
       <div>
         <div style="font-weight:800; color:#fff;">⚡ Starter Pack</div>
         <div style="font-size:0.8rem; color:var(--text-muted);">+100 Game Coins</div>
@@ -224,7 +224,7 @@
       <div style="font-weight:800; color:#f59e0b; font-size:1.1rem;">₹100</div>
     </div>
 
-    <div class="quick-pack-item" onclick="triggerCheckout('Gamer Pack', 500, 500)" style="border-color:#f59e0b;">
+    <div class="quick-pack-item" onclick="triggerCheckout('Gamer Pack', 500)" style="border-color:#f59e0b;">
       <div>
         <div style="font-weight:800; color:#fff;">🔥 Gamer Pack <span style="font-size:0.7rem; background:#f59e0b; color:#000; padding:2px 6px; border-radius:4px; font-weight:900;">POPULAR</span></div>
         <div style="font-size:0.8rem; color:var(--text-muted);">+500 Game Coins</div>
@@ -232,7 +232,7 @@
       <div style="font-weight:800; color:#f59e0b; font-size:1.1rem;">₹500</div>
     </div>
 
-    <div class="quick-pack-item" onclick="triggerCheckout('Pro Vault', 1000, 1000)">
+    <div class="quick-pack-item" onclick="triggerCheckout('Pro Vault', 1000)">
       <div>
         <div style="font-weight:800; color:#fff;">💎 Pro Vault</div>
         <div style="font-size:0.8rem; color:var(--text-muted);">+1,000 Game Coins</div>
@@ -240,7 +240,7 @@
       <div style="font-weight:800; color:#f59e0b; font-size:1.1rem;">₹1,000</div>
     </div>
 
-    <div class="quick-pack-item" onclick="triggerCheckout('Mythic Hoard', 2500, 2500)">
+    <div class="quick-pack-item" onclick="triggerCheckout('Mythic Hoard', 2500)">
       <div>
         <div style="font-weight:800; color:#fff;">👑 Mythic Hoard</div>
         <div style="font-size:0.8rem; color:var(--text-muted);">+2,500 Game Coins</div>
@@ -255,7 +255,7 @@
 
 <script>
   const urlParams = new URLSearchParams(window.location.search);
-  const orderIdParam = urlParams.get('orderId');
+  const orderIdParam = urlParams.get('orderId') || urlParams.get('order_id');
 
   function openQuickPackModal() {
     document.getElementById('quickModal').classList.add('active');
@@ -273,7 +273,17 @@
       document.getElementById('walletCoinsDisplay').textContent = (data.coins || 0).toLocaleString();
 
       if (orderIdParam) {
-        document.getElementById('successBanner').hidden = false;
+        const wasCredited = (data.history || []).some(item => item.orderId === orderIdParam);
+        const notice = document.getElementById('successBanner');
+        notice.hidden = false;
+        document.getElementById('paymentNoticeTitle').textContent = wasCredited
+          ? 'Top-Up Confirmed'
+          : 'Payment status pending';
+        document.getElementById('paymentNoticeTitle').style.color = wasCredited ? '#34d399' : '#fbbf24';
+        document.getElementById('paymentNoticeIcon').textContent = wasCredited ? '✓' : '⏳';
+        document.getElementById('paymentNoticeText').textContent = wasCredited
+          ? 'The verified payment webhook has credited this top-up to your vault.'
+          : 'Checkout returned to this page. Wallet credit is pending verification of the signed server-to-server webhook.';
       }
 
       const tbody = document.getElementById('walletLedgerBody');
@@ -295,14 +305,14 @@
     }
   }
 
-  async function triggerCheckout(packName, coins, price) {
+  async function triggerCheckout(packName, price) {
     closeQuickPackModal();
 
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packName, coins, price })
+        body: JSON.stringify({ packName, price })
       });
       const data = await res.json();
 
@@ -314,19 +324,13 @@
             amount: price,
             name: 'YOUPI Store',
             description: `${packName}`,
-            handler: async function(paymentResponse) {
-              // Direct instant credit
-              await fetch('/api/verify-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  paymentId: paymentResponse.utr || paymentResponse.paymentId || data.paymentId,
-                  orderId: data.orderId,
-                  coins: coins,
-                  packName: packName
-                })
-              });
+            handler: function() {
               document.getElementById('successBanner').hidden = false;
+              document.getElementById('paymentNoticeTitle').textContent = 'Payment status pending';
+              document.getElementById('paymentNoticeTitle').style.color = '#fbbf24';
+              document.getElementById('paymentNoticeIcon').textContent = '⏳';
+              document.getElementById('paymentNoticeText').textContent =
+                'Checkout reported success. Coins are added only after the signed server-to-server webhook is verified.';
               loadWallet();
             }
           });

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { YoupiPaymentClient } from '@youpi/merchant-sdk';
+import { PaymentNotificationService } from './payment-notification-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,7 +23,10 @@ export class CoinWalletStoreServer {
    * @param {{
    *   gatewayApiUrl?: string,
    *   merchantId?: string,
-   *   webhookSecret?: string
+   *   webhookSecret?: string,
+   *   notificationService?: PaymentNotificationService,
+   *   emailSender?: (message: { to: string, subject: string, html: string, text: string }) => Promise<unknown>,
+   *   whatsappSender?: (to: string, message: string) => Promise<unknown>
    * }} [options={}]
    */
   constructor(options = {}) {
@@ -36,10 +40,16 @@ export class CoinWalletStoreServer {
       merchantId: this.merchantId,
       webhookSecret: this.webhookSecret
     });
+    this.paymentNotifications = options.notificationService || new PaymentNotificationService({
+      gatewayApiUrl: this.gatewayApiUrl,
+      emailSender: options.emailSender,
+      whatsappSender: options.whatsappSender
+    });
 
     // In-memory persistent wallet balance & ledger for demo store
     this.walletCoins = 50; // default starting balance
     this.transactionHistory = [];
+    this.notifiedPaymentOutcomes = new Set();
 
     this.storeHtml = fs.readFileSync(path.join(__dirname, 'store.html'), 'utf8');
     this.walletHtml = fs.readFileSync(path.join(__dirname, 'wallet.html'), 'utf8');
@@ -334,7 +344,7 @@ export class CoinWalletStoreServer {
             const data = JSON.parse(body || '{}');
             const rawVal = data.price !== undefined ? data.price : (data.amount !== undefined ? data.amount : 1.00);
             const price = Number(rawVal);
-            if (isNaN(price) || price < 1) {
+            if (!Number.isFinite(price) || price < 1) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Minimum top-up amount is ₹1.00' }));
               return;
@@ -352,7 +362,7 @@ export class CoinWalletStoreServer {
               currency: 'INR',
               returnUrl,
               metadata: {
-                coins: data.coins || Math.round(price),
+                coins: Math.round(price),
                 packName: data.packName || data.productName || 'Gamer Pack'
               }
             });
@@ -380,93 +390,104 @@ export class CoinWalletStoreServer {
         return;
       }
 
-      // POST /api/verify-payment (Instant confirmation & credit from popup drawer handler)
+      // Browser-side checkout results are not authoritative; credits are issued by signed webhooks only.
       if (pathname === '/api/verify-payment' && method === 'POST') {
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', async () => {
-          try {
-            const data = JSON.parse(body || '{}');
-            const { paymentId, orderId, coins, packName } = data;
-
-            if (!orderId && !paymentId) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Missing orderId or paymentId' }));
-              return;
-            }
-
-            // Check if already credited
-            const alreadyCredited = this.transactionHistory.some(t => t.orderId === orderId);
-            if (alreadyCredited) {
-              res.writeHead(200, {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-              });
-              res.end(JSON.stringify({ success: true, coins: this.walletCoins, message: 'Already credited' }));
-              return;
-            }
-
-            // Verify with payment API if paymentId is available
-            let creditedCoins = Number(coins) || 100;
-            let finalPackName = packName || 'Coin Pack';
-
-            if (paymentId) {
-              try {
-                const session = await this.paymentClient.getPayment(paymentId);
-                if (session) {
-                  if (session.metadata?.coins) creditedCoins = Number(session.metadata.coins);
-                  if (session.metadata?.packName) finalPackName = session.metadata.packName;
-                }
-              } catch (e) {
-                console.warn('[Coin Wallet Store] getPayment check note:', e.message);
-              }
-            }
-
-            this.creditCoins(orderId, creditedCoins, finalPackName);
-            console.log(`[Coin Wallet Store] Verified & credited ${creditedCoins} coins for Order ${orderId}. New balance: ${this.walletCoins}`);
-
-            res.writeHead(200, {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            });
-            res.end(JSON.stringify({
-              success: true,
-              coins: this.walletCoins,
-              credited: creditedCoins,
-              packName: finalPackName
-            }));
-          } catch (err) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: err.message }));
-          }
+        req.resume();
+        res.writeHead(410, {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
         });
+        res.end(JSON.stringify({
+          error: 'Wallet credits are issued only after a verified server-to-server webhook.'
+        }));
         return;
       }
 
       // POST /api/webhook or /webhook (Signed webhook listener from YOUPI PG)
       if ((pathname === '/api/webhook' || pathname === '/webhook') && method === 'POST') {
-        let rawBody = '';
-        req.on('data', chunk => { rawBody += chunk; });
-        req.on('end', () => {
+        const rawBodyChunks = [];
+        req.on('data', chunk => { rawBodyChunks.push(chunk); });
+        req.on('end', async () => {
           const signature = req.headers['x-gateway-signature'];
+          const rawBody = Buffer.concat(rawBodyChunks).toString('utf8');
 
           try {
             // Verify HMAC-SHA256 signature using merchant SDK
             const event = this.paymentClient.verifyWebhook(rawBody, signature);
+            let credited = false;
+            let notificationStatus = null;
 
             if (event.event === 'SUCCESS' || event.status === 'SUCCESS') {
-              const orderId = event.orderId || event.data?.orderId;
+              const details = event.data || event;
+              const orderId = event.orderId || details.orderId;
+              if (typeof orderId !== 'string' || !orderId.trim()) {
+                throw new Error('Verified SUCCESS webhook is missing an orderId.');
+              }
+
               const alreadyCredited = this.transactionHistory.some(t => t.orderId === orderId);
               if (!alreadyCredited) {
-                const coinsToAdd = Number(event.metadata?.coins || event.data?.metadata?.coins) || 100;
-                const packName = event.metadata?.packName || event.data?.metadata?.packName || 'Coin Pack';
+                const metadata = event.metadata || details.metadata || {};
+                const coinsToAdd = Number(metadata.coins);
+                if (!Number.isSafeInteger(coinsToAdd) || coinsToAdd < 1) {
+                  throw new Error('Verified SUCCESS webhook is missing a valid coin amount.');
+                }
+                const packName = metadata.packName || 'Coin Pack';
                 this.creditCoins(orderId, coinsToAdd, packName);
+                credited = true;
                 console.log(`[Coin Wallet Store] Webhook received! Credited ${coinsToAdd} coins for Order ${orderId}. New balance: ${this.walletCoins}`);
+
+                try {
+                  notificationStatus = await this.paymentNotifications.notifySuccessfulPayment({
+                    ...details,
+                    event: 'SUCCESS',
+                    orderId,
+                    paymentId: event.paymentId || details.paymentId,
+                    amount: event.amount || details.amount,
+                    amountPaise: event.amountPaise || details.amountPaise,
+                    currency: event.currency || details.currency,
+                    method: event.method || details.method,
+                    completedAt: event.completedAt || details.completedAt,
+                    metadata,
+                    customer: event.customer || details.customer
+                  });
+                } catch (notificationError) {
+                  console.error(`[Coin Wallet Store] Customer notifications failed for order ${orderId}: ${notificationError.message}`);
+                  notificationStatus = { email: 'failed', whatsapp: 'failed' };
+                }
+              }
+            } else if (event.event === 'CANCELLED' || event.status === 'CANCELLED') {
+              const details = event.data || event;
+              const orderId = event.orderId || details.orderId;
+              if (typeof orderId !== 'string' || !orderId.trim()) {
+                throw new Error('Verified CANCELLED webhook is missing an orderId.');
+              }
+
+              const notificationKey = event.paymentId || details.paymentId || orderId;
+              if (!this.notifiedPaymentOutcomes.has(notificationKey)) {
+                this.notifiedPaymentOutcomes.add(notificationKey);
+                try {
+                  notificationStatus = await this.paymentNotifications.notifyCancelledPayment({
+                    ...details,
+                    event: 'CANCELLED',
+                    orderId,
+                    paymentId: event.paymentId || details.paymentId,
+                    amount: event.amount || details.amount,
+                    amountPaise: event.amountPaise || details.amountPaise,
+                    currency: event.currency || details.currency,
+                    method: event.method || details.method,
+                    completedAt: event.completedAt || details.completedAt,
+                    metadata: event.metadata || details.metadata || {},
+                    customer: event.customer || details.customer
+                  });
+                } catch (notificationError) {
+                  console.error(`[Coin Wallet Store] Cancellation notifications failed for order ${orderId}: ${notificationError.message}`);
+                  notificationStatus = { email: 'failed', whatsapp: 'failed' };
+                }
               }
             }
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ received: true, credited: true }));
+            res.end(JSON.stringify({ received: true, credited, notifications: notificationStatus }));
           } catch (err) {
             console.error('[Coin Wallet Store] Webhook verification failed:', err.message);
             res.writeHead(400, { 'Content-Type': 'application/json' });

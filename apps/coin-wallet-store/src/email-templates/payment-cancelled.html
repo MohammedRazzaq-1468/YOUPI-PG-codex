@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Payment Cancelled | YOUPI Store</title>
+
+  <style>
+    body, table, td, p, h1, h2 {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      background: #f7f7f5;
+      color: #243044;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .detail-label {
+      width: 42%;
+      padding: 13px 10px 13px 0;
+      color: #7c8491;
+      font-size: 13px;
+      line-height: 20px;
+      border-bottom: 1px solid #e8e9e7;
+      vertical-align: top;
+    }
+
+    .detail-value {
+      padding: 13px 0;
+      color: #303a49;
+      font-size: 13px;
+      line-height: 20px;
+      text-align: right;
+      border-bottom: 1px solid #e8e9e7;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .metadata {
+      margin: 0;
+      padding: 16px;
+      background: #f5f6f5;
+      border-radius: 8px;
+      color: #46505c;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      line-height: 21px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+
+    @media only screen and (max-width: 600px) {
+      .outer-padding {
+        padding: 20px 18px !important;
+      }
+
+      .email-header {
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+      }
+
+      .email-title {
+        font-size: 25px !important;
+        line-height: 32px !important;
+      }
+
+      .intro {
+        font-size: 14px !important;
+        line-height: 23px !important;
+      }
+
+      .status-section {
+        padding-top: 23px !important;
+        padding-bottom: 23px !important;
+      }
+
+      .content {
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+      }
+
+      .detail-label,
+      .detail-value {
+        display: block !important;
+        width: auto !important;
+        text-align: left !important;
+        box-sizing: border-box !important;
+      }
+
+      .detail-label {
+        padding: 12px 0 2px !important;
+        border-bottom: 0 !important;
+      }
+
+      .detail-value {
+        padding: 0 0 12px !important;
+      }
+
+      .metadata {
+        padding: 13px !important;
+        font-size: 12px !important;
+        line-height: 19px !important;
+      }
+    }
+
+    @media only screen and (max-width: 360px) {
+      .outer-padding {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+      }
+
+      .email-title {
+        font-size: 23px !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Email preview text -->
+  <div style="display:none;font-size:1px;color:#f7f7f5;line-height:1px;
+              max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    Your YOUPI Store payment session was cancelled. Review your order details.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         border="0" style="width:100%;background:#f7f7f5;">
+    <tr>
+      <td align="center" class="outer-padding"
+          style="padding:35px 24px;">
+
+        <table role="presentation" class="shell" width="100%"
+               cellpadding="0" cellspacing="0" border="0"
+               style="width:100%;max-width:600px;">
+
+          <!-- Brand -->
+          <tr>
+            <td style="padding-bottom:8px;">
+              <p style="margin:0;color:#26374b;font-size:19px;
+                        line-height:28px;font-weight:800;letter-spacing:-.5px;">
+                YOUPI<span style="color:#d18b38;">.</span>
+                <span style="color:#858b91;font-size:12px;
+                             font-weight:400;letter-spacing:1px;">STORE</span>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Header -->
+          <tr>
+            <td class="email-header"
+                style="padding:30px 0;border-bottom:1px solid #e3e5e2;">
+
+              <table role="presentation" cellpadding="0" cellspacing="0"
+                     border="0">
+                <tr>
+                  <td width="38" height="38" align="center" valign="middle"
+                      style="width:38px;height:38px;background:#fff0dc;
+                             border-radius:50%;color:#a85e12;
+                             font-size:22px;font-weight:bold;">
+                    &mdash;
+                  </td>
+
+                  <td valign="middle"
+                      style="padding-left:11px;color:#a85e12;
+                             font-size:12px;line-height:18px;
+                             font-weight:bold;letter-spacing:1.2px;">
+                    PAYMENT CANCELLED
+                  </td>
+                </tr>
+              </table>
+
+              <h1 class="email-title"
+                  style="margin:23px 0 10px;color:#26374b;
+                         font-size:30px;line-height:39px;
+                         font-weight:700;letter-spacing:-.7px;
+                         overflow-wrap:anywhere;">
+                Hello, {{CUSTOMER_NAME}}
+              </h1>
+
+              <p class="intro"
+                 style="margin:0;color:#6b7280;font-size:15px;line-height:25px;">
+                The payment session for your order was cancelled.
+                Please review the transaction details below.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Status -->
+          <tr>
+            <td class="status-section"
+                style="padding:29px 0;border-bottom:1px solid #e3e5e2;">
+
+              <p style="margin:0 0 9px;color:#888276;font-size:11px;
+                        line-height:17px;font-weight:bold;
+                        letter-spacing:1.4px;text-transform:uppercase;">
+                Payment status
+              </p>
+
+              <p style="margin:0;color:#a85e12;font-size:28px;
+                        line-height:37px;font-weight:bold;">
+                Cancelled
+              </p>
+
+              <p style="margin:10px 0 0;color:#8a6540;font-size:12px;
+                        line-height:20px;">
+                <span style="color:#bd791f;font-weight:bold;">&#8212;</span>
+                &nbsp; No wallet coins credited
+              </p>
+            </td>
+          </tr>
+
+          <!-- Explanation -->
+          <tr>
+            <td style="padding:24px 0 4px;">
+              <p style="margin:0;color:#596575;font-size:14px;line-height:24px;">
+                No wallet coins were credited for this payment. If you believe
+                your account was charged, contact the merchant through its
+                official support channel.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Order details -->
+          <tr>
+            <td class="content" style="padding:26px 0 30px;">
+
+              <h2 style="margin:0 0 17px;color:#26374b;
+                         font-size:16px;line-height:24px;">
+                Order details
+              </h2>
+
+              <table role="presentation" width="100%" cellpadding="0"
+                     cellspacing="0" border="0"
+                     style="width:100%;table-layout:fixed;
+                            border-top:1px solid #e8e9e7;">
+
+                <tr>
+                  <td class="detail-label">Order ID</td>
+                  <td class="detail-value" style="font-weight:bold;">
+                    {{ORDER_ID}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Payment ID</td>
+                  <td class="detail-value">{{PAYMENT_ID}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Amount</td>
+                  <td class="detail-value" style="font-weight:bold;">
+                    {{CURRENCY}} {{AMOUNT}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Payment method</td>
+                  <td class="detail-value">{{PAYMENT_METHOD}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Customer email</td>
+                  <td class="detail-value">{{CUSTOMER_EMAIL}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Customer phone</td>
+                  <td class="detail-value">{{CUSTOMER_PHONE}}</td>
+                </tr>
+
+              </table>
+
+              <!-- Additional information -->
+              <h2 style="margin:30px 0 14px;color:#26374b;
+                         font-size:16px;line-height:24px;">
+                Additional information
+              </h2>
+
+              <pre class="metadata">{{METADATA}}</pre>
+
+              <!-- Support notice -->
+              <table role="presentation" width="100%" cellpadding="0"
+                     cellspacing="0" border="0"
+                     style="width:100%;margin-top:26px;">
+                <tr>
+                  <td style="padding:15px 16px;background:#fff6e9;
+                             border-left:3px solid #d99a42;">
+                    <p style="margin:0;color:#765e40;font-size:12px;
+                              line-height:20px;">
+                      <strong style="color:#8d5618;">
+                        Were you charged?
+                      </strong>
+                      If your account was charged despite this cancellation,
+                      contact the merchant through its official support
+                      channel and provide the order ID above.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 0 10px;border-top:1px solid #e3e5e2;">
+
+              <p style="margin:0 0 7px;color:#596575;font-size:12px;
+                        line-height:20px;font-weight:bold;">
+                YOUPI Store
+              </p>
+
+              <p style="margin:0;color:#89919b;font-size:11px;line-height:19px;">
+                This is an automated notification about your order.
+                Please do not reply directly to this email.
+              </p>
+
+              <p style="margin:13px 0 0;color:#a0a6ad;font-size:10px;
+                        line-height:16px;">
+                &copy; YOUPI Store. All rights reserved.
+              </p>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

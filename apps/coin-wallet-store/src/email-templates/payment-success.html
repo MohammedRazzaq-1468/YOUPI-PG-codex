@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Payment Confirmed | YOUPI Store</title>
+
+  <style>
+    body, table, td, p, h1, h2 {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      background-color: #f5f8f6;
+      color: #19352a;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border: 0;
+    }
+
+    .outer {
+      width: 100%;
+      background-color: #f5f8f6;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .detail-label {
+      width: 42%;
+      padding: 13px 10px 13px 0;
+      color: #78867f;
+      font-size: 13px;
+      line-height: 20px;
+      border-bottom: 1px solid #e8eee9;
+      vertical-align: top;
+    }
+
+    .detail-value {
+      padding: 13px 0;
+      color: #253a30;
+      font-size: 13px;
+      line-height: 20px;
+      text-align: right;
+      border-bottom: 1px solid #e8eee9;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .metadata {
+      margin: 0;
+      padding: 16px;
+      background: #f6f9f7;
+      border-radius: 8px;
+      color: #34473c;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      line-height: 21px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-wrap: break-word;
+      word-break: break-word;
+    }
+
+    @media only screen and (max-width: 600px) {
+      .outer-padding {
+        padding: 20px 18px !important;
+      }
+
+      .brand {
+        font-size: 17px !important;
+      }
+
+      .email-header {
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+      }
+
+      .email-title {
+        font-size: 25px !important;
+        line-height: 32px !important;
+      }
+
+      .intro {
+        font-size: 14px !important;
+        line-height: 23px !important;
+      }
+
+      .amount-section {
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+      }
+
+      .amount {
+        font-size: 32px !important;
+        line-height: 40px !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+      }
+
+      .content {
+        padding-top: 24px !important;
+        padding-bottom: 24px !important;
+      }
+
+      .detail-label,
+      .detail-value {
+        display: block !important;
+        width: auto !important;
+        text-align: left !important;
+        box-sizing: border-box !important;
+      }
+
+      .detail-label {
+        padding: 12px 0 2px !important;
+        border-bottom: 0 !important;
+      }
+
+      .detail-value {
+        padding: 0 0 12px !important;
+      }
+
+      .metadata {
+        padding: 13px !important;
+        font-size: 12px !important;
+        line-height: 19px !important;
+      }
+
+      .footer {
+        padding-top: 20px !important;
+      }
+    }
+
+    @media only screen and (max-width: 360px) {
+      .outer-padding {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+      }
+
+      .email-title {
+        font-size: 23px !important;
+      }
+
+      .amount {
+        font-size: 28px !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Preview text -->
+  <div style="display:none;font-size:1px;color:#f5f8f6;line-height:1px;
+              max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    Your YOUPI Store payment is confirmed. Keep this receipt for your records.
+  </div>
+
+  <table role="presentation" class="outer" width="100%"
+         cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" class="outer-padding"
+          style="padding:35px 24px;">
+
+        <!-- Responsive email container -->
+        <table role="presentation" class="shell" width="100%"
+               cellpadding="0" cellspacing="0" border="0"
+               style="width:100%;max-width:600px;">
+
+          <!-- Brand -->
+          <tr>
+            <td style="padding-bottom:8px;">
+              <p class="brand"
+                 style="margin:0;color:#11664b;font-size:19px;
+                        line-height:28px;font-weight:800;letter-spacing:-.5px;">
+                YOUPI<span style="color:#1da875;">.</span>
+                <span style="color:#75847b;font-size:12px;
+                             font-weight:400;letter-spacing:1px;">STORE</span>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Confirmation header -->
+          <tr>
+            <td class="email-header"
+                style="padding:30px 0;border-bottom:1px solid #e2eae5;">
+
+              <table role="presentation" cellpadding="0" cellspacing="0"
+                     border="0">
+                <tr>
+                  <td width="38" height="38" align="center" valign="middle"
+                      style="width:38px;height:38px;border-radius:50%;
+                             background:#dff6e9;color:#08764f;
+                             font-size:21px;font-weight:bold;">
+                    &#10003;
+                  </td>
+                  <td valign="middle"
+                      style="padding-left:11px;color:#12815b;
+                             font-size:12px;line-height:18px;
+                             font-weight:bold;letter-spacing:1.2px;">
+                    PAYMENT SUCCESSFUL
+                  </td>
+                </tr>
+              </table>
+
+              <h1 class="email-title"
+                  style="margin:23px 0 10px;color:#153b2b;
+                         font-size:30px;line-height:39px;
+                         font-weight:700;letter-spacing:-.7px;
+                         overflow-wrap:anywhere;">
+                Thank you, {{CUSTOMER_NAME}}
+              </h1>
+
+              <p class="intro"
+                 style="margin:0;color:#68796f;font-size:15px;line-height:25px;">
+                Your payment has been verified successfully.
+                Here is your receipt for your records.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Amount -->
+          <tr>
+            <td class="amount-section"
+                style="padding:30px 0;border-bottom:1px solid #e2eae5;">
+
+              <p style="margin:0 0 9px;color:#7b8a81;font-size:11px;
+                        line-height:17px;font-weight:bold;
+                        letter-spacing:1.4px;text-transform:uppercase;">
+                Total amount paid
+              </p>
+
+              <p class="amount"
+                 style="margin:0;color:#126a49;font-size:38px;
+                        line-height:47px;font-weight:bold;letter-spacing:-1px;
+                        overflow-wrap:anywhere;word-wrap:break-word;">
+                {{CURRENCY}} {{AMOUNT}}
+              </p>
+
+              <p style="margin:11px 0 0;color:#3f7b60;font-size:12px;
+                        line-height:20px;">
+                <span style="color:#16875b;font-weight:bold;">&#10003;</span>
+                &nbsp; Transaction verified
+              </p>
+            </td>
+          </tr>
+
+          <!-- Payment details -->
+          <tr>
+            <td class="content" style="padding:30px 0;">
+
+              <h2 style="margin:0 0 17px;color:#1d3529;
+                         font-size:16px;line-height:24px;">
+                Payment details
+              </h2>
+
+              <table role="presentation" width="100%" cellpadding="0"
+                     cellspacing="0" border="0"
+                     style="width:100%;border-top:1px solid #e8eee9;
+                            table-layout:fixed;">
+
+                <tr>
+                  <td class="detail-label">Order ID</td>
+                  <td class="detail-value" style="font-weight:bold;">
+                    {{ORDER_ID}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Payment ID</td>
+                  <td class="detail-value">{{PAYMENT_ID}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Payment method</td>
+                  <td class="detail-value">{{PAYMENT_METHOD}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Bank reference / UTR</td>
+                  <td class="detail-value">{{UTR}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Completed at</td>
+                  <td class="detail-value">{{COMPLETED_AT}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Customer email</td>
+                  <td class="detail-value">{{CUSTOMER_EMAIL}}</td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label">Customer phone</td>
+                  <td class="detail-value">{{CUSTOMER_PHONE}}</td>
+                </tr>
+              </table>
+
+              <!-- Order information -->
+              <h2 style="margin:30px 0 14px;color:#1d3529;
+                         font-size:16px;line-height:24px;">
+                Order information
+              </h2>
+
+              <pre class="metadata">{{METADATA}}</pre>
+
+              <!-- Receipt notice -->
+              <table role="presentation" width="100%" cellpadding="0"
+                     cellspacing="0" border="0"
+                     style="width:100%;margin-top:26px;">
+                <tr>
+                  <td style="padding:15px 16px;background:#edf7f0;
+                             border-left:3px solid #21a36b;">
+                    <p style="margin:0;color:#4d6958;font-size:12px;
+                              line-height:20px;">
+                      <strong style="color:#245b3d;">Keep this receipt.</strong>
+                      This confirmation was sent after server-side payment
+                      verification. For assistance, contact the merchant
+                      through its official support channel.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="footer"
+                style="padding:24px 0 10px;border-top:1px solid #e2eae5;">
+
+              <p style="margin:0 0 7px;color:#53675a;font-size:12px;
+                        line-height:20px;font-weight:bold;">
+                Thank you for shopping with YOUPI Store.
+              </p>
+
+              <p style="margin:0;color:#87958c;font-size:11px;line-height:19px;">
+                This is an automated payment notification.
+                Please do not reply directly to this email.
+              </p>
+
+              <p style="margin:13px 0 0;color:#a0aaa3;font-size:10px;
+                        line-height:16px;">
+                &copy; YOUPI Store. All rights reserved.
+              </p>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

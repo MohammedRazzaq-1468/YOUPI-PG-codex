@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@youpi/common": "*",
-    "@youpi/merchant-sdk": "*"
+    "@youpi/merchant-sdk": "*",
+    "nodemailer": "^10.1.2"
   }
 }

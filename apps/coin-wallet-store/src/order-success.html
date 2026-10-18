@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Payment Successful · YOUPI Store</title>
+  <title>Payment Status · YOUPI Store</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
@@ -14,8 +14,8 @@
       --border: #1e293b;
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
-      --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.2);
+      --success: #f59e0b;
+      --success-glow: rgba(245, 158, 11, 0.2);
       --text: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -88,9 +88,9 @@
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      color: #34d399;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
       font-size: 0.8rem;
       font-weight: 700;
       padding: 0.35rem 0.85rem;
@@ -156,12 +156,12 @@
 
 <main>
   <div class="result-card">
-    <div class="status-icon-wrap">✓</div>
-    <h1 class="result-title">Payment Successful!</h1>
-    <p class="result-subtitle">Your transaction has been processed and automatically verified by YOUPI PG banking observers.</p>
+    <div class="status-icon-wrap">…</div>
+    <h1 class="result-title">Payment Status Received</h1>
+    <p class="result-subtitle">The checkout reported success. This browser page is for customer feedback only; final order fulfillment requires the signed server-to-server webhook.</p>
 
     <div class="verified-badge">
-      <span>●</span> VERIFIED BY YOUPI PG
+      <span>●</span> AWAITING SERVER VERIFICATION
     </div>
 
     <div class="details-table">
@@ -178,7 +178,7 @@
         <span class="detail-val" id="valMode">{{MODE}}</span>
       </div>
       <div class="detail-row">
-        <span class="detail-label">Bank Reference / UTR</span>
+        <span class="detail-label">Checkout-reported reference</span>
         <span class="detail-val" id="valUtr">{{UTR}}</span>
       </div>
       <div class="detail-row">
@@ -186,8 +186,8 @@
         <span class="detail-val" id="valTimestamp" style="font-size: 0.8rem;">{{TIMESTAMP}}</span>
       </div>
       <div class="detail-row">
-        <span class="detail-label">Status</span>
-        <span class="detail-val" style="color: #34d399;">SUCCESS (SETTLED)</span>
+        <span class="detail-label">Fulfillment status</span>
+        <span class="detail-val" style="color: #fbbf24;">PENDING SIGNED WEBHOOK</span>
       </div>
     </div>
 

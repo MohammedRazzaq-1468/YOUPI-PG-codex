@@ -1,7 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { Database } from '@youpi/db';
+import { CustomerRepository, Database } from '@youpi/db';
 import { startServer as startPaymentApi } from '../../../payment-api/src/index.js';
 import { startCoinWalletStore } from '../index.js';
 import { generateHmac } from '@youpi/common';
@@ -11,6 +11,8 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
   let storeInstance;
   let storeBaseUrl;
   let testDb;
+  const sentEmails = [];
+  const sentWhatsAppMessages = [];
   const storeSecret = 'wallet_store_secret_9988';
 
   before(async () => {
@@ -27,7 +29,9 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
     storeInstance = await startCoinWalletStore(5099, {
       gatewayApiUrl: `http://localhost:${apiInstance.port}`,
       merchantId: '00000000-0000-0000-0000-000000000001',
-      webhookSecret: storeSecret
+      webhookSecret: storeSecret,
+      emailSender: async message => sentEmails.push(message),
+      whatsappSender: async (to, message) => sentWhatsAppMessages.push({ to, message })
     });
 
     storeBaseUrl = `http://localhost:${storeInstance.port}`;
@@ -100,6 +104,8 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
     assert.ok(checkoutRes.body.orderId.startsWith('COIN-ORD-'));
     assert.ok(checkoutRes.body.paymentId);
     assert.ok(checkoutRes.body.checkoutUrl.includes('/checkout/'));
+    const createdPayment = await storeInstance.server.paymentClient.getPayment(checkoutRes.body.paymentId);
+    assert.equal(createdPayment.metadata.coins, 449);
   });
 
   test('POST /api/webhook processes signed SUCCESS event and credits wallet coins', async () => {
@@ -114,7 +120,7 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
       currency: 'INR',
       method: 'UPI',
       metadata: {
-        coins: 550,
+        coins: 449,
         packName: 'Gamer Pack'
       }
     };
@@ -134,13 +140,151 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
     assert.equal(hookRes.body.credited, true);
 
     // Verify coins were credited to wallet!
-    assert.equal(storeInstance.server.walletCoins, initialCoins + 550);
+    assert.equal(storeInstance.server.walletCoins, initialCoins + 449);
 
     // Verify recorded in ledger
     const balanceRes = await request('/api/wallet-balance');
-    assert.equal(balanceRes.body.coins, initialCoins + 550);
+    assert.equal(balanceRes.body.coins, initialCoins + 449);
     assert.ok(balanceRes.body.history.length >= 1);
     assert.equal(balanceRes.body.history[0].orderId, 'COIN-ORD-555');
+  });
+
+  test('verified payment sends customer receipt by email and WhatsApp once', async () => {
+    sentEmails.length = 0;
+    sentWhatsAppMessages.length = 0;
+
+    const customer = new CustomerRepository(testDb).create({
+      name: 'Asha Rao',
+      email: 'asha@example.com',
+      mobileNumber: '9876543210'
+    });
+    const orderId = `COIN-ORD-NOTIFY-${Date.now()}`;
+    const paymentResponse = await fetch(`http://localhost:${apiInstance.port}/api/v1/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Merchant-Id': '00000000-0000-0000-0000-000000000001'
+      },
+      body: JSON.stringify({
+        orderId,
+        amount: '145.00',
+        currency: 'INR',
+        customerId: customer.id,
+        metadata: { coins: 145, packName: 'Gamer Pack', productCode: 'GAME-145' }
+      })
+    });
+    assert.equal(paymentResponse.status, 201);
+    const payment = await paymentResponse.json();
+
+    const payloadString = JSON.stringify({
+      event: 'SUCCESS',
+      paymentId: payment.paymentId,
+      orderId,
+      amount: '145.00',
+      amountPaise: 14500,
+      currency: 'INR',
+      method: 'UPI',
+      utr: '123456789012',
+      completedAt: '2026-10-18T07:45:00.000Z',
+      metadata: { coins: 145, packName: 'Gamer Pack', productCode: 'GAME-145' }
+    });
+    const signature = generateHmac(payloadString, storeSecret);
+    const webhook = await request('/api/webhook', {
+      method: 'POST',
+      headers: { 'X-Gateway-Signature': `sha256=${signature}` },
+      body: payloadString
+    });
+
+    assert.equal(webhook.status, 200);
+    assert.deepEqual(webhook.body.notifications, { email: 'sent', whatsapp: 'sent' });
+    assert.equal(sentEmails.length, 1);
+    assert.equal(sentEmails[0].to, customer.email);
+    assert.match(sentEmails[0].subject, new RegExp(orderId));
+    assert.match(sentEmails[0].html, /asha@example\.com/);
+    assert.match(sentEmails[0].html, /123456789012/);
+    assert.match(sentEmails[0].html, /GAME-145/);
+    assert.equal(Object.hasOwn(sentEmails[0], 'text'), false);
+    assert.equal(sentWhatsAppMessages.length, 1);
+    assert.equal(sentWhatsAppMessages[0].to, customer.mobileNumber);
+    assert.match(sentWhatsAppMessages[0].message, new RegExp(orderId));
+    assert.match(sentWhatsAppMessages[0].message, /14500|145\.00/);
+    assert.match(sentWhatsAppMessages[0].message, /123456789012/);
+
+    const duplicateWebhook = await request('/api/webhook', {
+      method: 'POST',
+      headers: { 'X-Gateway-Signature': `sha256=${signature}` },
+      body: payloadString
+    });
+    assert.equal(duplicateWebhook.status, 200);
+    assert.equal(sentEmails.length, 1);
+    assert.equal(sentWhatsAppMessages.length, 1);
+  });
+
+  test('verified cancellation sends HTML email and WhatsApp once without crediting coins', async () => {
+    sentEmails.length = 0;
+    sentWhatsAppMessages.length = 0;
+    const initialCoins = storeInstance.server.walletCoins;
+    const customer = new CustomerRepository(testDb).create({
+      name: 'Mina <Merchant>',
+      email: 'mina@example.com',
+      mobileNumber: '9876543211'
+    });
+    const orderId = `COIN-ORD-CANCEL-${Date.now()}`;
+    const paymentResponse = await fetch(`http://localhost:${apiInstance.port}/api/v1/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Merchant-Id': '00000000-0000-0000-0000-000000000001'
+      },
+      body: JSON.stringify({
+        orderId,
+        amount: '75.00',
+        currency: 'INR',
+        customerId: customer.id,
+        metadata: { packName: 'Starter Pack', coins: 75 }
+      })
+    });
+    assert.equal(paymentResponse.status, 201);
+    const payment = await paymentResponse.json();
+    const payloadString = JSON.stringify({
+      event: 'CANCELLED',
+      paymentId: payment.paymentId,
+      orderId,
+      amount: '75.00',
+      amountPaise: 7500,
+      currency: 'INR',
+      method: 'UPI',
+      metadata: { packName: 'Starter Pack', coins: 75 }
+    });
+    const signature = generateHmac(payloadString, storeSecret);
+
+    const cancellation = await request('/api/webhook', {
+      method: 'POST',
+      headers: { 'X-Gateway-Signature': `sha256=${signature}` },
+      body: payloadString
+    });
+
+    assert.equal(cancellation.status, 200);
+    assert.deepEqual(cancellation.body.notifications, { email: 'sent', whatsapp: 'sent' });
+    assert.equal(storeInstance.server.walletCoins, initialCoins);
+    assert.equal(sentEmails.length, 1);
+    assert.equal(sentEmails[0].to, customer.email);
+    assert.match(sentEmails[0].subject, /cancelled/i);
+    assert.match(sentEmails[0].html, /Payment cancelled/i);
+    assert.match(sentEmails[0].html, /Mina &lt;Merchant&gt;/);
+    assert.match(sentEmails[0].html, new RegExp(orderId));
+    assert.equal(Object.hasOwn(sentEmails[0], 'text'), false);
+    assert.equal(sentWhatsAppMessages.length, 1);
+    assert.match(sentWhatsAppMessages[0].message, /payment cancelled/i);
+
+    const duplicate = await request('/api/webhook', {
+      method: 'POST',
+      headers: { 'X-Gateway-Signature': `sha256=${signature}` },
+      body: payloadString
+    });
+    assert.equal(duplicate.status, 200);
+    assert.equal(sentEmails.length, 1);
+    assert.equal(sentWhatsAppMessages.length, 1);
   });
 
   test('POST /api/webhook rejects fraudulent signature', async () => {
@@ -157,11 +301,30 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
     assert.ok(hookRes.body.error.includes('signature mismatch'));
   });
 
+  test('POST /api/webhook rejects signed SUCCESS events without an order ID', async () => {
+    const initialCoins = storeInstance.server.walletCoins;
+    const payloadString = JSON.stringify({
+      event: 'SUCCESS',
+      metadata: { coins: 100, packName: 'Coin Pack' }
+    });
+    const signature = generateHmac(payloadString, storeSecret);
+
+    const hookRes = await request('/api/webhook', {
+      method: 'POST',
+      headers: { 'X-Gateway-Signature': `sha256=${signature}` },
+      body: payloadString
+    });
+
+    assert.equal(hookRes.status, 400);
+    assert.match(hookRes.body.error, /orderId/i);
+    assert.equal(storeInstance.server.walletCoins, initialCoins);
+  });
+
   test('GET /wallet renders wallet page with updated balance', async () => {
     const res = await request('/wallet?orderId=COIN-ORD-555');
     assert.equal(res.status, 200);
     assert.ok(res.body.includes('Customer Account') || res.body.includes('YOUPI Store'));
-    assert.ok(res.body.includes('Top-Up Successful!'));
+    assert.ok(res.body.includes('Top-Up Confirmed'));
     assert.ok(res.body.includes('Current Vault Balance'));
   });
 
@@ -275,11 +438,10 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
     assert.ok(res.body.includes('Try Again'));
   });
 
-  test('POST /api/verify-payment credits coins directly from popup drawer and prevents duplicates', async () => {
+  test('POST /api/verify-payment cannot credit coins from browser-controlled data', async () => {
     const initialCoins = storeInstance.server.walletCoins;
     const orderId = `COIN-ORD-POPUP-${Date.now()}`;
 
-    // 1. Initial verification call
     const verifyRes = await request('/api/verify-payment', {
       method: 'POST',
       body: {
@@ -289,35 +451,19 @@ describe('Coin Top-Up Wallet Demo Store Integration Tests', () => {
       }
     });
 
-    assert.equal(verifyRes.status, 200);
-    assert.equal(verifyRes.body.success, true);
-    assert.equal(verifyRes.body.coins, initialCoins + 100);
-    assert.equal(storeInstance.server.walletCoins, initialCoins + 100);
-
-    // 2. Duplicate call must be idempotent
-    const dupRes = await request('/api/verify-payment', {
-      method: 'POST',
-      body: {
-        orderId,
-        coins: 100,
-        packName: 'Starter Pack'
-      }
-    });
-
-    assert.equal(dupRes.status, 200);
-    assert.equal(dupRes.body.success, true);
-    assert.equal(dupRes.body.message, 'Already credited');
-    assert.equal(storeInstance.server.walletCoins, initialCoins + 100);
+    assert.equal(verifyRes.status, 410);
+    assert.match(verifyRes.body.error, /server-to-server webhook/i);
+    assert.equal(storeInstance.server.walletCoins, initialCoins);
   });
 
-  test('GET /order-success renders verified payment page with parameters', async () => {
+  test('GET /order-success renders pending server verification status with checkout parameters', async () => {
     const res = await request('/order-success?order_id=ORD-SUCC-123&amount=499.00&utr=998877665544&mode=UPI');
     assert.equal(res.status, 200);
-    assert.ok(res.body.includes('Payment Successful!'));
+    assert.ok(res.body.includes('Payment Status Received'));
     assert.ok(res.body.includes('ORD-SUCC-123'));
     assert.ok(res.body.includes('499.00'));
     assert.ok(res.body.includes('998877665544'));
-    assert.ok(res.body.includes('VERIFIED BY YOUPI PG'));
+    assert.ok(res.body.includes('AWAITING SERVER VERIFICATION'));
   });
 
   test('GET /order-suspicious renders held for review security notice', async () => {
